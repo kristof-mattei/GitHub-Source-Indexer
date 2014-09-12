@@ -51,11 +51,12 @@
   where /ExampleLibrary/LibraryClass.cs is the remainder after removing c:\git\OriginalCompiledProjectPath\ from the beginning of the original compile path. 
 #>
 
-param(
+param
+(
        ## Folder that will be recursively searched for PDB files.
        [Parameter(Mandatory = $true)]
        [Alias("symbols")]
-       [string] $symbolsFolder,
+       [System.IO.DirectoryInfo] $symbolsFolder,
        
        ## github user ID
        [Parameter(Mandatory = $true)]
@@ -70,10 +71,10 @@ param(
        [string] $branch,
        
        ## A root path for the source files
-       [string] $sourcesRoot,
+       [System.IO.DirectoryInfo] $sourcesRoot,
        
        ## Debugging Tools for Windows installation path
-       [string] $dbgToolsPath,
+       [System.IO.DirectoryInfo] $dbgToolsPath,
        
        ## Github URL
        [string] $gitHubUrl,
@@ -89,15 +90,17 @@ param(
        
        ## Verify the filenames in the tree in the local repository
        [switch] $verifyLocalRepo
-       )
+)
        
 
 function CorrectPathBackslash {
-  param([string] $path)
-  
-  if (![String]::IsNullOrEmpty($path)) {
-    if (!$path.EndsWith("\")) {
-      $path += "\"
+  param([System.IO.DirectoryInfo] $path)
+
+  $fullPath = $path.FullName
+
+  if (![String]::IsNullOrEmpty($fullPath)) {
+    if (!$fullPath.EndsWith("\")) {
+      $path = New-Object System.IO.DirectoryInfo -ArgumentList $($fullPath + "\")
     }
   }
   return $path
@@ -117,21 +120,21 @@ function FindLongestCommonPath {
     if ($path1Parts[$i] -eq $path2Parts[$i]) {
       $result += $path1Parts[$i]
     }
-  }
+  }f
   return [String]::Join("\", $result)
 }
 
 ###############################################################
 
 function CheckDebuggingToolsPath {
-  param([string] $dbgToolsPath)
+  param([System.IO.DirectoryInfo] $dbgToolsPath)
 
   $dbgToolsPath = CorrectPathBackslash $dbgToolsPath
 
   # check whether the dbgToolsPath variable is set
   # it links to srctool.exe application
   if (![String]::IsNullOrEmpty($dbgToolsPath)) {
-    if (![System.IO.File]::Exists($dbgToolsPath + "srctool.exe")) {
+    if (![System.IO.File]::Exists($dbgToolsPath.FullName + "srctool.exe")) {
       Write-Debug "Debugging Tools not found at the given location - trying \srcsrv subdirectory..."
       # Let's try maybe also srcsrv
       $dbgToolsPath += "srcsrv\"
@@ -225,7 +228,7 @@ function WriteStreamSources {
         
   Write-Verbose "Preparing stream source files section..."
 
-  $sources = & ($dbgToolsPath + 'srctool.exe') -r $pdbPath 2>$null
+  $sources = & ($dbgToolsPath.FullName + 'srctool.exe') -r $pdbPath 2>$null
   if ($sources -eq $null) {
     write-warning "No steppable code in pdb file $pdbPath, skipping";
     "failed";
