@@ -120,7 +120,7 @@ function FindLongestCommonPath {
     if ($path1Parts[$i] -eq $path2Parts[$i]) {
       $result += $path1Parts[$i]
     }
-  }f
+  }
   return [String]::Join("\", $result)
 }
 
